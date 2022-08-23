@@ -1,5 +1,6 @@
 import React from 'react';
-import { Drawer, Button, Modal, message, Card, Space, Radio, Dropdown, Menu } from 'antd'
+import { Drawer, Button, Modal, message, Card, Space, Radio, Dropdown, Menu, Tree } from 'antd'
+import Editor from '@monaco-editor/react'
 import { DownOutlined } from '@ant-design/icons'
 import { CCMS as CCMSAntDesign } from 'ccms-antd'
 import { CCMSConfig, BasicConfig, PageListItem } from "ccms/dist/src/main";
@@ -13,6 +14,7 @@ import './app.less';
 import ConfigJSON from './component/ConfigJSON';
 import { StepConfigs as IStepConfigs } from 'ccms/dist/src/steps';
 import { TreeSelectFieldOption } from "ccms/dist/src/components/formFields/treeSelect";
+import { DataNode } from 'antd/lib/tree';
 
 /**
  * 页面配置
@@ -220,6 +222,108 @@ class App extends React.Component<AppProps, CCMSConsigState> {
     })
   }
 
+  handleFieldType(type: string): string {
+    switch (type) {
+      case 'text':
+        return '文本框'
+      case 'longtext':
+        return '长文本'
+      case 'multiple_text':
+        return '文本列表'
+      case 'number':
+        return '数值'
+      case 'select_single':
+        return '单选框'
+      case 'select_multiple':
+        return '复选框'
+      case 'switch':
+        return '开关'
+      case 'datetime':
+        return '时间日期'
+      case 'datetimeRange':
+        return '时间日期范围'
+      case 'tree_select':
+        return '树形选框'
+      case 'color':
+        return '取色器'
+      case 'upload':
+        return '文件上传'
+      case 'form':
+        return '子表单'
+      case 'table':
+        return '子表格'
+      case 'group':
+        return '群组'
+      case 'tabs':
+        return 'Tabs'
+      case 'hidden':
+        return '隐藏'
+      case 'import_subform':
+        return '动态子表单'
+      default:
+        return type
+    }
+  }
+
+  handleColumnType(type: string): string {
+    switch (type) {
+      case 'text':
+        return '文本'
+      case 'number':
+        return '数值'
+      case 'datetime':
+        return '时间日期'
+      case 'datetimeRange':
+        return '时间日期范围'
+      case 'Aenum':
+        return '选项'
+      case 'image':
+        return '图片'
+      default:
+        return type
+    }
+  }
+
+  handleOutline(config: Record<string, unknown>, prefix = ''): DataNode[] | undefined {
+    const children: DataNode[] = []
+    if (Object.prototype.hasOwnProperty.call(config, 'fields')) {
+      const handleFieldsOutline = (fields: Record<string, unknown>[]) => {
+        return fields.map((field) => ({
+          title: `${this.handleFieldType(field.type as string)} - ${field.label ? field.label : '-'}`,
+          key: `${prefix}fields-${field.type}${field.label ? `|${field.label}` : ''}`,
+          children: this.handleOutline(field, `${prefix}fields-${field.type}${field.label ? `|${field.label}` : ''}`)
+        }))
+      }
+      children.push({
+        title: '字段',
+        key: `${prefix}fields`,
+        children: handleFieldsOutline(config.fields as Record<string, unknown>[])
+      })
+    }
+    if (Object.prototype.hasOwnProperty.call(config, 'tableColumns')) {
+      const handleColumnsOutline = (columns: Record<string, unknown>[]) => {
+        return columns.map((column) => ({
+          title: `${this.handleColumnType(column.type as string)} - ${column.label ? column.label : '-'}`,
+          key: `${prefix}fields-${column.type}${column.label ? `|${column.label}` : ''}`,
+          children: this.handleOutline(
+            column,
+            `${prefix}fields-${column.type}${column.label ? `|${column.label}` : ''}`
+          )
+        }))
+      }
+      children.push({
+        title: '列',
+        key: `${prefix}columns`,
+        children: handleColumnsOutline(config.fields as Record<string, unknown>[])
+      })
+    }
+    if (children.length) {
+      return children
+    } else {
+      return undefined
+    }
+  }
+
   render() {
     const {
       ready,
@@ -244,35 +348,71 @@ class App extends React.Component<AppProps, CCMSConsigState> {
     const CCMS = CCMSAntDesign
 
     return (
-      <div id="ccms-config" className="ccms-config">
+      <div id="ccms-config" className="ccms-config" style={{ padding: 0, height: '100vh' }}>
         {/* 预览CCMS */}
         <div className="preview">
           {ready && (
-            <CCMS
-              checkPageAuth={checkPageAuth}
-              loadPageURL={loadPageURL}
-              loadPageFrameURL={loadPageFrameURL}
-              loadPageConfig={loadPageConfig}
-              loadPageList={loadPageList}
-              loadDomain={loadDomain}
-              handlePageRedirect={handlePageRedirect}
-              sourceData={this.props.sourceData}
-              baseRoute={this.props.baseRoute}
-              callback={() => {
-                // if (window.history.length > 1) {
-                //   window.history.back()
-                // } else {
-                //   window.close()
-                // }
-              }}
-              config={pageConfig}
-            />
+            <div style={{ display: 'flex' }}>
+              <div style={{ width: 500, padding: '0 20px', overflow: 'auto', height: '100vh' }}>
+                <CCMS
+                  checkPageAuth={checkPageAuth}
+                  loadPageURL={loadPageURL}
+                  loadPageFrameURL={loadPageFrameURL}
+                  loadPageConfig={loadPageConfig}
+                  loadPageList={loadPageList}
+                  loadDomain={loadDomain}
+                  handlePageRedirect={handlePageRedirect}
+                  sourceData={this.props.sourceData}
+                  baseRoute={this.props.baseRoute}
+                  callback={() => {
+                    // if (window.history.length > 1) {
+                    //   window.history.back()
+                    // } else {
+                    //   window.close()
+                    // }
+                  }}
+                  config={pageConfig}
+                />
+              </div>
+              <div style={{ width: 500, border: '1px solid', marginLeft: 160 }}>
+                <span>
+                  <Tree
+                    showIcon
+                    defaultExpandAll
+                    treeData={[
+                      {
+                        title: '页面大纲',
+                        key: 'root',
+                        children: PageTemplates[pageTemplate].map(({ label, step }, index) => {
+                          return {
+                            key: step,
+                            title: label,
+                            children: this.handleOutline(
+                              (pageConfig.steps || [])[index] as unknown as Record<string, unknown>
+                            )
+                          }
+                        })
+                      }
+                    ]}
+                  />
+                </span>
+              </div>
+              <div style={{ width: 500, border: '1px solid', marginLeft: 160 }}>
+                <Editor
+                  theme="vs-dark"
+                  height="100vh"
+                  language="json"
+                  value={JSON.stringify(pageConfig, undefined, 2)}
+                  options={{ fontSize: 10 }}
+                />
+              </div>
+            </div>
           )}
         </div>
 
         {/* 配置化步骤内容 */}
         <Drawer
-          width={350}
+          width={500}
           mask={false}
           placement="right"
           closable={false}
